@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Silmarills Monte Carlo Simulation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #2c3e50;
+      margin-top: 30px;
+      border-left: 4px solid #3498db;
+      padding-left: 10px;
+    }
+    .summary-box {
+      background-color: #f0f7ff;
+      border: 1px solid #cce0ff;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 30px;
+    }
+    .chart-container {
+      height: 400px;
+      margin-bottom: 30px;
+      position: relative;
+    }
+    .tab-container {
+      margin-bottom: 30px;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
+    }
+    .tab.active {
+      background-color: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .insight-box {
+      background-color: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 30px;
+    }
+    .insight-box ol {
+      padding-left: 20px;
+      margin-bottom: 0;
+    }
+    .insight-box li {
+      margin-bottom: 10px;
+    }
+    .insight-box li strong {
+      color: #2c3e50;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 0.9em;
+      color: #7f8c8d;
+      border-top: 1px solid #eee;
+      padding-top: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table th, table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Silmarills Financial Monte Carlo Simulation</h1>
+  
+  <div class="summary-box">
+    <h2>Simulation Summary</h2>
+    <p>Based on 1,000 Monte Carlo iterations using triangular distributions for key uncertainties.</p>
+    <table>
+      <tr>
+        <th>Metric</th>
+        <th>Base Case</th>
+        <th>P10 (Pessimistic)</th>
+        <th>P50 (Expected)</th>
+        <th>P90 (Optimistic)</th>
+      </tr>
+      <tr>
+        <td>Year 5 Revenue</td>
+        <td>$18.79M</td>
+        <td>$18.84M</td>
+        <td>$21.47M</td>
+        <td>$24.38M</td>
+      </tr>
+      <tr>
+        <td>Year 5 EBITDA</td>
+        <td>$6.20M</td>
+        <td>$5.80M</td>
+        <td>$6.95M</td>
+        <td>$8.21M</td>
+      </tr>
+      <tr>
+        <td>IRR</td>
+        <td>N/A</td>
+        <td>70.8%</td>
+        <td>78.1%</td>
+        <td>86.1%</td>
+      </tr>
+      <tr>
+        <td>Y5 Cumulative Cash Flow</td>
+        <td>N/A</td>
+        <td>$8.13M</td>
+        <td>$9.37M</td>
+        <td>$10.83M</td>
+      </tr>
+    </table>
+  </div>
+  
+  <div class="tab-container">
+    <div class="tabs">
+      <div class="tab active" data-tab="revenue">Revenue</div>
+      <div class="tab" data-tab="ebitda">EBITDA</div>
+      <div class="tab" data-tab="irr">IRR Distribution</div>
+      <div class="tab" data-tab="probability">Probability Analysis</div>
+      <div class="tab" data-tab="sensitivity">Sensitivity Analysis</div>
+      <div class="tab" data-tab="sttr">STTR Contribution</div>
+    </div>
+    
+    <div id="revenue" class="tab-content active">
+      <h2>Revenue Projections ($M)</h2>
+      <div class="chart-container">
+        <canvas id="revenueChart"></canvas>
+      </div>
+      <p>
+        The revenue projection shows the base plan compared to Monte Carlo simulation results. 
+        The P50 (expected) case shows higher Year 5 revenue than the base plan, with a 75.3% 
+        probability of exceeding $20M by Year 5.
+      </p>
+    </div>
+    
+    <div id="ebitda" class="tab-content">
+      <h2>EBITDA Projections ($M)</h2>
+      <div class="chart-container">
+        <canvas id="ebitdaChart"></canvas>
+      </div>
+      <p>
+        EBITDA projections follow a similar pattern to revenue, with the Monte Carlo simulation 
+        showing a 47.9% probability of exceeding $7M EBITDA by Year 5.
+      </p>
+    </div>
+    
+    <div id="irr" class="tab-content">
+      <h2>IRR Distribution</h2>
+      <div class="chart-container">
+        <canvas id="irrChart"></canvas>
+      </div>
+      <p>
+        The IRR distribution shows returns ranging from 68.9% (P5) to 88.3% (P95), with a median 
+        IRR of 78.1%. This indicates strong potential returns on the initial $1.156M investment.
+      </p>
+    </div>
+    
+    <div id="probability" class="tab-content">
+      <h2>Probability Analysis</h2>
+      <div class="chart-container">
+        <canvas id="probabilityChart"></canvas>
+      </div>
+      <p>
+        Key probabilities from the simulation include a 75.3% chance of exceeding $20M revenue in 
+        Year 5 and a 47.9% chance of achieving over $7M in EBITDA. The model shows a 100% probability 
+        of remaining profitable across all years.
+      </p>
+    </div>
+    
+    <div id="sensitivity" class="tab-content">
+      <h2>Sensitivity Analysis</h2>
+      <div class="chart-container">
+        <canvas id="sensitivityChart"></canvas>
+      </div>
+      <p>
+        Contract Win Rate has the largest impact on outcomes (27.8% range), followed by STTR 
+        Funding Rate (19.0%). Year 2 Growth Rate (16.0%) is also significant, highlighting the 
+        importance of securing early contracts.
+      </p>
+    </div>
+    
+    <div id="sttr" class="tab-content">
+      <h2>STTR Revenue Contribution</h2>
+      <div class="chart-container">
+        <canvas id="sttrChart"></canvas>
+      </div>
+      <p>
+        STTR revenue contribution grows significantly over time, starting at 0% in Year 1 and 
+        reaching 13.5% of total revenue by Year 5, highlighting its increasing strategic importance.
+      </p>
+    </div>
+  </div>
+  
+  <div class="insight-box">
+    <h2>Key Insights & Recommendations</h2>
+    <ol>
+      <li>
+        <strong>Contract Win Rate is Critical:</strong> With a 27.8% impact range on outcomes, 
+        focusing resources on securing initial defense contracts should be the top priority.
+      </li>
+      <li>
+        <strong>STTR Program Value:</strong> STTR funding success has a 19.0% impact on outcomes and 
+        contributes 13.5% of Year 5 revenue, making it an important supplementary revenue stream.
+      </li>
+      <li>
+        <strong>Year 2 Growth Importance:</strong> Year 2 growth has a larger impact (16.0%) than 
+        later years, emphasizing the importance of building momentum early.
+      </li>
+      <li>
+        <strong>Robust Profitability:</strong> The simulation shows 100% probability of 
+        maintaining profitability across all years, indicating a strong financial foundation.
+      </li>
+      <li>
+        <strong>Exceptional Return Potential:</strong> With a median IRR of 78.1%, the business 
+        model demonstrates exceptional return potential on the initial $1.156M investment.
+      </li>
+    </ol>
+  </div>
+  
+  <div class="footer">
+    <p>* This simulation is based on 1,000 Monte Carlo iterations using triangular distributions for key uncertainties.</p>
+    <p>* Results should be updated as actual performance data becomes available.</p>
+  </div>
+
+  <script>
+    // Tab functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+    
+    // Chart data
+    const years = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'];
+    
+    // Revenue data
+    const baseRevenue = [3.50, 7.97, 11.56, 14.46, 18.79];
+    const p10Revenue = [2.54, 5.93, 9.15, 12.50, 18.84];
+    const p50Revenue = [2.92, 6.79, 10.47, 14.28, 21.47];
+    const p90Revenue = [3.34, 7.84, 11.98, 16.32, 24.38];
+    
+    // EBITDA data
+    const baseEbitda = [0.63, 1.99, 3.47, 4.63, 6.20];
+    const p10Ebitda = [0.42, 1.40, 2.62, 3.76, 5.80];
+    const p50Ebitda = [0.50, 1.67, 3.12, 4.47, 6.95];
+    const p90Ebitda = [0.60, 1.99, 3.67, 5.27, 8.21];
+    
+    // IRR data
+    const irrPercentiles = ['P5', 'P10', 'P25', 'P50', 'P75', 'P90', 'P95'];
+    const irrValues = [68.9, 70.8, 74.3, 78.1, 82.5, 86.1, 88.3];
+    
+    // Probability data
+    const probabilityLabels = [
+      'Year 5 Revenue > $20M', 
+      'Year 5 EBITDA > $7M', 
+      'Profitable All Years',
+      'Year 3 Revenue < $10M',
+      'Cash Flow > $10M'
+    ];
+    const probabilityValues = [75.3, 47.9, 100.0, 34.7, 28.9];
+    
+    // Sensitivity data
+    const sensitivityLabels = [
+      'Contract Win Rate',
+      'STTR Funding Rate',
+      'Year 2 Growth Rate',
+      'Year 5 Growth Rate',
+      'Year 3 Growth Rate',
+      'Year 4 Growth Rate',
+      'EBITDA Margins'
+    ];
+    const sensitivityValues = [27.8, 19.0, 16.0, 13.8, 13.3, 12.2, 0.3];
+    
+    // STTR data
+    const sttrAmounts = [0.00, 0.24, 0.72, 1.22, 2.90];
+    const sttrPercentages = [0.0, 3.5, 6.8, 8.5, 13.5];
+    
+    // Create charts
+    window.onload = function() {
+      // Revenue Chart
+      new Chart(document.getElementById('revenueChart'), {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: [
+            {
+              label: 'Base Plan',
+              data: baseRevenue,
+              borderColor: '#8884d8',
+              backgroundColor: '#8884d8',
+              pointRadius: 5,
+              borderWidth: 2
+            },
+            {
+              label: 'Pessimistic (P10)',
+              data: p10Revenue,
+              borderColor: '#ff8042',
+              backgroundColor: '#ff8042',
+              pointRadius: 4,
+              borderDash: [5, 5]
+            },
+            {
+              label: 'Expected (P50)',
+              data: p50Revenue,
+              borderColor: '#0088FE',
+              backgroundColor: '#0088FE',
+              pointRadius: 4,
+              borderWidth: 2
+            },
+            {
+              label: 'Optimistic (P90)',
+              data: p90Revenue,
+              borderColor: '#00C49F',
+              backgroundColor: '#00C49F',
+              pointRadius: 4,
+              borderDash: [3, 3]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Revenue ($M)'
+              }
+            }
+          }
+        }
+      });
+      
+      // EBITDA Chart
+      new Chart(document.getElementById('ebitdaChart'), {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: [
+            {
+              label: 'Base Plan',
+              data: baseEbitda,
+              borderColor: '#8884d8',
+              backgroundColor: '#8884d8',
+              pointRadius: 5,
+              borderWidth: 2
+            },
+            {
+              label: 'Pessimistic (P10)',
+              data: p10Ebitda,
+              borderColor: '#ff8042',
+              backgroundColor: '#ff8042',
+              pointRadius: 4,
+              borderDash: [5, 5]
+            },
+            {
+              label: 'Expected (P50)',
+              data: p50Ebitda,
+              borderColor: '#0088FE',
+              backgroundColor: '#0088FE',
+              pointRadius: 4,
+              borderWidth: 2
+            },
+            {
+              label: 'Optimistic (P90)',
+              data: p90Ebitda,
+              borderColor: '#00C49F',
+              backgroundColor: '#00C49F',
+              pointRadius: 4,
+              borderDash: [3, 3]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'EBITDA ($M)'
+              }
+            }
+          }
+        }
+      });
+      
+      // IRR Chart
+      new Chart(document.getElementById('irrChart'), {
+        type: 'bar',
+        data: {
+          labels: irrPercentiles,
+          datasets: [
+            {
+              label: 'IRR (%)',
+              data: irrValues,
+              backgroundColor: '#0088FE'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              min: 60,
+              max: 95,
+              title: {
+                display: true,
+                text: 'IRR (%)'
+              }
+            }
+          },
+          plugins: {
+            annotation: {
+              annotations: {
+                line1: {
+                  type: 'line',
+                  yMin: 78.1,
+                  yMax: 78.1,
+                  borderColor: 'red',
+                  borderWidth: 2,
+                  borderDash: [3, 3],
+                  label: {
+                    content: 'Median: 78.1%',
+                    position: 'right'
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      // Probability Chart
+      new Chart(document.getElementById('probabilityChart'), {
+        type: 'bar',
+        data: {
+          labels: probabilityLabels,
+          datasets: [
+            {
+              label: 'Probability (%)',
+              data: probabilityValues,
+              backgroundColor: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          scales: {
+            x: {
+              min: 0,
+              max: 100,
+              title: {
+                display: true,
+                text: 'Probability (%)'
+              }
+            }
+          }
+        }
+      });
+      
+      // Sensitivity Chart
+      new Chart(document.getElementById('sensitivityChart'), {
+        type: 'bar',
+        data: {
+          labels: sensitivityLabels,
+          datasets: [
+            {
+              label: 'Impact Range (%)',
+              data: sensitivityValues,
+              backgroundColor: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658']
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Impact Range (%)'
+              }
+            }
+          }
+        }
+      });
+      
+      // STTR Chart
+      new Chart(document.getElementById('sttrChart'), {
+        type: 'bar',
+        data: {
+          labels: years,
+          datasets: [
+            {
+              label: 'STTR Revenue ($M)',
+              data: sttrAmounts,
+              backgroundColor: '#0088FE',
+              order: 2,
+              yAxisID: 'y'
+            },
+            {
+              label: '% of Total Revenue',
+              data: sttrPercentages,
+              borderColor: '#FF8042',
+              backgroundColor: '#FF8042',
+              type: 'line',
+              order: 1,
+              yAxisID: 'y1',
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              type: 'linear',
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Amount ($M)'
+              }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 20,
+              title: {
+                display: true,
+                text: 'Percentage (%)'
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            }
+          }
+        }
+      });
+    };
+  </script>
+</body>
+</html>
